@@ -17,7 +17,15 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.example.mapsbaique.R;
+import com.example.mapsbaique.utilidades.Utilidades_Request;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -27,6 +35,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
@@ -34,16 +45,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Context context;
     private Marker marker;
 
+    StringRequest stringRequest;
+    RequestQueue request;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
         context = MapsActivity.this;
+        request = Volley.newRequestQueue(getApplicationContext());
+        locationStart();
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
         gpsEnaDis();
     }
 
@@ -116,7 +129,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
            LatLng ubicacion = new LatLng(loc.getLatitude(), loc.getLongitude());
 
-           if (marker == null){
+          /* if (marker == null){
                marker = mMap.addMarker(new MarkerOptions().position(ubicacion).draggable(true));
            }else {
                marker.setPosition(new LatLng(loc.getLatitude(), loc.getLongitude()));
@@ -128,7 +141,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     .bearing(90)
                     .tilt(30)
                     .build();
-            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(camara));
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(camara));*/
+
+            String lat = String.valueOf(loc.getLatitude());
+            String lng = String.valueOf(loc.getLongitude());
+            cargarWebServiceRegistro(lat,lng);
 
 
         }
@@ -200,5 +217,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     /* TERMINA PERMISOS GPS */
+
+    private void cargarWebServiceRegistro(final String latitude, final String longitude) {
+
+        String url = Utilidades_Request.HTTP+Utilidades_Request.IP+Utilidades_Request.CARPETA+"wsJSONRegistroEvento.php?";
+
+        stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+
+                if(response.trim().equalsIgnoreCase("Noregistra")){
+                    Toast.makeText(getApplicationContext(), "No registro", Toast.LENGTH_SHORT).show();
+                }else if(response.trim().equalsIgnoreCase("ErrorBaseDatos")){
+                    Toast.makeText(getApplicationContext(), "Base de datos error", Toast.LENGTH_SHORT).show();
+                }else{
+                    Toast.makeText(getApplicationContext(), "REGISTRO EXITOSO", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(getApplicationContext(), "Tiempo caducado..", Toast.LENGTH_SHORT).show();
+            }
+        }){
+            @Override
+            protected Map<String, String> getParams() throws AuthFailureError {
+
+                Map<String,String> paramentros = new HashMap<>();
+                paramentros.put("cx",latitude);
+                paramentros.put("cy",longitude);
+                return paramentros;
+            }
+        };
+        request.add(stringRequest);
+    }
 
 }
